@@ -77,11 +77,14 @@ function Modal({ title, fields, initial, onSave, onClose }) {
   return (
     <div className="modal-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <form className="card modal" onSubmit={submit}>
-        <h2>{title}</h2>
+        <div className="modal-head">
+          <h2>{title}</h2>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Tutup form">✕</button>
+        </div>
         <div className="form">
           {fields.map((f) => (
             <label key={f.name} className={f.full ? 'full' : ''}>
-              {f.label}
+              <span>{f.label}</span>
               {f.type === 'textarea' ? (
                 <textarea value={v[f.name] ?? ''} onChange={(e) => setV({ ...v, [f.name]: e.target.value })} />
               ) : f.type === 'select' ? (
@@ -95,8 +98,8 @@ function Modal({ title, fields, initial, onSave, onClose }) {
             </label>
           ))}
           <div className="full foot">
-            <button type="button" className="btn" onClick={onClose}>Batal</button>
-            <button className="btn primary">Simpan</button>
+            <button type="button" className="btn btn-cancel" onClick={onClose}>Batal</button>
+            <button className="btn primary btn-save">Simpan</button>
           </div>
         </div>
       </form>
@@ -135,7 +138,9 @@ export default function Page() {
         try { const r = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential }) }); const v = await r.json(); if (!r.ok) throw new Error(v.error); setUser(v.user); }
         catch (e) { setAuthError(e.message || 'Login Google gagal.'); } finally { setAuthBusy(false); }
       } });
-      g.renderButton(target, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 320 });
+      const parentWidth = target.parentElement ? target.parentElement.clientWidth : 320;
+      const btnWidth = Math.min(320, Math.max(220, parentWidth > 40 ? parentWidth - 16 : 280));
+      g.renderButton(target, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: btnWidth });
     };
     renderGoogle(); window.addEventListener('google-ready', renderGoogle);
     return () => window.removeEventListener('google-ready', renderGoogle);
@@ -194,17 +199,18 @@ export default function Page() {
 
   const courseMap = useMemo(() => Object.fromEntries(data.courses.map((c) => [c.id, c])), [data.courses]);
 
-  if (!authReady) return <div className="auth-screen"><div className="auth-card">Memuat StudyFlow…</div></div>;
-  if (!user) return <div className="auth-screen"><form className="auth-card" onSubmit={submitAuth}>
-    <div className="auth-brand">StudyFlow</div>
-    {authMode === 'signup' && <label>Nama lengkap<input name="name" required autoComplete="name" /></label>}
-    <label>Username<input name="username" required minLength="3" autoComplete="username" /></label>
-    {authMode === 'signup' && <label>Email<input name="email" type="email" required autoComplete="email" /></label>}
-    <label>Kata sandi<input name="password" type="password" required minLength="8" autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} /></label>
+  if (!authReady) return <div className="auth-screen"><div className="card auth-card app-loading">Memuat StudyFlow…</div></div>;
+  if (!user) return <div className="auth-screen"><form className="card auth-card" onSubmit={submitAuth}>
+    <div className="auth-brand"><Icon name="book" size={26} /><span>StudyFlow</span></div>
+    <p className="auth-sub">{authMode === 'login' ? 'Masuk ke akun StudyFlow untuk mengatur jadwal & tugas perkuliahanmu' : 'Daftar akun baru untuk mulai menata tugas dan materi kuliah'}</p>
+    {authMode === 'signup' && <label>Nama lengkap<input name="name" required autoComplete="name" placeholder="Nama lengkap Anda" /></label>}
+    <label>Username<input name="username" required minLength="3" autoComplete="username" placeholder="Minimal 3 karakter" /></label>
+    {authMode === 'signup' && <label>Email<input name="email" type="email" required autoComplete="email" placeholder="nama@email.com" /></label>}
+    <label>Kata sandi<input name="password" type="password" required minLength="8" autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} placeholder="Minimal 8 karakter" /></label>
     {authError && <div className="auth-error" role="alert">{authError}</div>}
     <button className="btn primary auth-submit" disabled={authBusy}>{authBusy ? 'Memproses…' : authMode === 'login' ? 'Masuk' : 'Daftar'}</button>
     <div className="auth-divider">atau lanjutkan dengan</div><div id="google-signin" />{!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && <small className="auth-hint">Atur NEXT_PUBLIC_GOOGLE_CLIENT_ID untuk mengaktifkan Google Sign-In.</small>}
-    <button type="button" className="auth-switch" onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthError(''); }}>{authMode === 'login' ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}</button>
+    <button type="button" className="auth-switch" onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthError(''); }}>{authMode === 'login' ? 'Belum punya akun? Daftar sekarang' : 'Sudah punya akun? Masuk di sini'}</button>
   </form><ScriptGoogle /></div>;
 
   const save = (k, item) => setData((d) => ({
@@ -324,9 +330,18 @@ export default function Page() {
 
       <main className="main">
         {tab !== 'fokus' && <div className="topbar">
+          <div className="topbar-user-area">
+            <div className="avatar">{((user?.name || user?.username || 'U')[0]).toUpperCase()}</div>
+            <div className="topbar-user-meta">
+              <span className="user-greeting">{user?.name || user?.username}</span>
+              {saveStatus && <span className={`save-indicator ${saveStatus}`} role="status">{saveStatus === 'saving' ? 'Menyimpan…' : saveStatus === 'saved' ? 'Tersimpan' : saveStatus === 'loading' ? 'Memuat data…' : 'Gagal tersimpan'}</span>}
+            </div>
+          </div>
           <label className="searchbox"><Icon name="search" size={16} /><input aria-label="Cari" placeholder="Cari tugas, materi, atau mata kuliah..." /></label>
-          <button className="icon-button" aria-label="Notifikasi"><Icon name="bell" /></button>
-          <span className="user-greeting">{user?.name || user?.username}</span>{saveStatus && <span className={`save-indicator ${saveStatus}`} role="status">{saveStatus === 'saving' ? 'Menyimpan…' : saveStatus === 'saved' ? 'Tersimpan' : saveStatus === 'loading' ? 'Memuat data…' : 'Gagal tersimpan'}</span>}<button className="btn sm" onClick={logout}>Keluar</button>
+          <div className="topbar-actions">
+            <button className="icon-button" aria-label="Notifikasi"><Icon name="bell" /></button>
+            <button className="btn sm btn-logout" onClick={logout}>Keluar</button>
+          </div>
         </div>}
         {!ready ? <div className="card app-loading" role="status">Memuat StudyFlow…</div> : tab === 'beranda' ? (
           <Home data={data} courseMap={courseMap} toggle={toggle} empty={empty} loadDemo={() => setData(demo())} go={setTab} userName={user.name || user.username} />
@@ -396,7 +411,7 @@ function TaskRow({ t, c, toggle, open, del, fx }) {
         )}
       </div>
       {open && (
-        <div className="acts">
+        <div className="acts task-row-acts">
           <button className="btn sm" onClick={() => open('tasks', t)}>Ubah</button>
           <button className="btn sm danger" onClick={() => del('tasks', t.id)}>Hapus</button>
         </div>
@@ -584,7 +599,7 @@ function Schedule({ data, setSettings }) {
         title={wk ? `Minggu ke-${wk}` : 'Jadwal mingguan'}
         sub={`${fmt(days[0])} – ${fmt(days[5])} · jadwal kuliah dan tenggat tugas`}
         action={
-          <div className="acts">
+          <div className="acts schedule-nav-acts">
             <button className="btn sm" onClick={() => setOff(off - 1)}>Minggu lalu</button>
             <button className="btn sm" onClick={() => setOff(0)}>Minggu ini</button>
             <button className="btn sm" onClick={() => setOff(off + 1)}>Minggu depan</button>
