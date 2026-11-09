@@ -1,0 +1,88 @@
+CREATE DATABASE IF NOT EXISTS studyflow
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE studyflow;
+
+CREATE TABLE IF NOT EXISTS users (
+  id CHAR(32) PRIMARY KEY,
+  username VARCHAR(32) NOT NULL UNIQUE,
+  email VARCHAR(254) NOT NULL UNIQUE,
+  name VARCHAR(120) NOT NULL,
+  password_hash VARCHAR(255) NULL,
+  google_sub VARCHAR(255) NULL UNIQUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS user_data (
+  user_id CHAR(32) PRIMARY KEY,
+  payload JSON NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user_data_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Data aplikasi dipisahkan per akun dan per jenis agar mudah dilihat di phpMyAdmin.
+-- Tabel user_data tetap dipertahankan sebagai sumber migrasi dari versi lama.
+CREATE TABLE IF NOT EXISTS user_profiles (
+  user_id CHAR(32) PRIMARY KEY,
+  profile_data JSON NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user_profiles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS user_courses (
+  user_id CHAR(32) NOT NULL,
+  item_id VARCHAR(64) NOT NULL,
+  item_data JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, item_id),
+  CONSTRAINT fk_user_courses_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS user_tasks (
+  user_id CHAR(32) NOT NULL,
+  item_id VARCHAR(64) NOT NULL,
+  item_data JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, item_id),
+  CONSTRAINT fk_user_tasks_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS user_materials (
+  user_id CHAR(32) NOT NULL,
+  item_id VARCHAR(64) NOT NULL,
+  item_data JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, item_id),
+  CONSTRAINT fk_user_materials_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS user_file_metadata (
+  user_id CHAR(32) NOT NULL,
+  item_id VARCHAR(64) NOT NULL,
+  item_data JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, item_id),
+  CONSTRAINT fk_user_file_metadata_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS user_settings (
+  user_id CHAR(32) PRIMARY KEY,
+  settings_data JSON NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user_settings_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS user_files (
+  id VARCHAR(64) NOT NULL,
+  user_id CHAR(32) NOT NULL,
+  file_name VARCHAR(255) NOT NULL,
+  mime_type VARCHAR(160) NOT NULL DEFAULT 'application/octet-stream',
+  file_size BIGINT UNSIGNED NOT NULL,
+  contents LONGBLOB NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, id),
+  CONSTRAINT fk_user_files_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
